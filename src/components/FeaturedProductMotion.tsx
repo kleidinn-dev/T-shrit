@@ -52,6 +52,7 @@ export function FeaturedProductMotion({ products = [], layout = "motion" }: { pr
   }, [products]);
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [direction, setDirection] = useState<"next" | "previous">("next");
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [reduced, setReduced] = useState(false);
@@ -75,7 +76,9 @@ export function FeaturedProductMotion({ products = [], layout = "motion" }: { pr
     return () => { preference.removeEventListener("change", sync); document.removeEventListener("visibilitychange", visibility); observer?.disconnect(); };
   }, []);
 
-  function select(next: number) {
+  function select(next: number, movement: "next" | "previous" = "next") {
+    if (items.length < 2) return;
+    setDirection(movement);
     window.clearTimeout(timer.current); window.cancelAnimationFrame(frame.current);
     if (layout === "static") { setIndex(next); setVisible(true); return; }
     if (reduced) {
@@ -97,7 +100,7 @@ export function FeaturedProductMotion({ products = [], layout = "motion" }: { pr
   }
   useEffect(() => {
     if (!inView || !pageVisible || items.length < 2) return;
-    const rotation = window.setInterval(() => select(((index < items.length ? index : 0) + 1) % items.length), 4500);
+    const rotation = window.setInterval(() => select(((index < items.length ? index : 0) + 1) % items.length, "next"), 4500);
     return () => window.clearInterval(rotation);
   }, [index, items.length, layout, reduced, inView, pageVisible]);
   useEffect(() => { if (layout === "static") { window.clearTimeout(timer.current); window.cancelAnimationFrame(frame.current); setIndex(0); setVisible(true); } }, [layout]);
@@ -109,7 +112,7 @@ export function FeaturedProductMotion({ products = [], layout = "motion" }: { pr
 
   return <section ref={root} id="featured-products" className={styles.section} data-motion-owned aria-label="Featured products">
     <div className={styles.layout}>
-      <div className={styles.info} data-visible={visible}>
+      <div className={styles.info} data-visible={visible} data-direction={direction}>
         <h2>{current.name}</h2>
         {current.description ? <p className={styles.description}>{current.description}</p> : null}
         <div className={styles.priceRow}>
@@ -120,13 +123,14 @@ export function FeaturedProductMotion({ products = [], layout = "motion" }: { pr
           <span>View product</span><ArrowUpRightIcon width={18} height={18} />
         </Link>
       </div>
-      <Link href={"/products/" + current.slug} className={styles.media} data-product-transition data-featured-product-media data-visible={visible} aria-label={"View " + current.name}>
+      <Link href={"/products/" + current.slug} className={styles.media} data-direction={direction} data-product-transition data-featured-product-media data-visible={visible} aria-label={"View " + current.name}>
         <FeaturedPhoto key={current.id} product={current} />
       </Link>
     </div>
     {items.length > 1 ? (
       <div className={styles.controls} aria-label="Featured products change automatically">
-        <span className={styles.position} aria-hidden="true">
+        <button type="button" className={styles.navButton} onClick={() => select((activeIndex - 1 + items.length) % items.length, "previous")} aria-label="Previous featured product"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
+        <span className={styles.position} aria-live="polite">
           {String(activeIndex + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
         </span>
         <div className={styles.progressTrack} aria-hidden="true">
@@ -138,6 +142,7 @@ export function FeaturedProductMotion({ products = [], layout = "motion" }: { pr
             />
           ))}
         </div>
+        <button type="button" className={styles.navButton} onClick={() => select((activeIndex + 1) % items.length, "next")} aria-label="Next featured product"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></button>
       </div>
     ) : null}
   </section>;
